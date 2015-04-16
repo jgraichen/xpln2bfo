@@ -1,0 +1,8 @@
+[package]
+name = "xpln2bfo"
+version = "0.0.1"
+authors = ["Jan Graichen <jg@altimos.de>"]
+
+[dependencies]
+zip = "0.1.5"
+xml-rs = "0.1.23"
