@@ -4,6 +4,7 @@ extern crate xpln2bfo;
 
 use std::io::Read;
 use std::fs;
+use std::result;
 
 use xml::reader::EventReader;
 use xml::reader::events::*;
@@ -28,6 +29,8 @@ fn run() -> i32 {
     };
 
     let odf = odf::File::new(file).unwrap();
+
+    println!("{}", odf.mimetype);
 
     // loop {
     //     match ods.next() {
