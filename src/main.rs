@@ -29,6 +29,7 @@ fn run() -> i32 {
     };
 
     let odf = odf::File::new(file).unwrap();
+    let ods = ods::Parser::new(odf).unwrap();
 
     println!("{}", odf.mimetype);
 
