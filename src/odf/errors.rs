@@ -3,7 +3,6 @@ extern crate zip;
 
 //
 use std::io;
-use std::io::Read;
 use std::error;
 use std::fmt;
 
@@ -16,13 +15,13 @@ pub enum Error {
 
 impl ::std::convert::From<zip::result::ZipError> for Error {
     fn from(err: zip::result::ZipError) -> Error {
-        Error::Zip(err)
+        Error::ZipError(err)
     }
 }
 
 impl ::std::convert::From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
-        Error::Io(err)
+        Error::IoError(err)
     }
 }
 

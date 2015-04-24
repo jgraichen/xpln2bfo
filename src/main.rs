@@ -10,6 +10,7 @@ use xml::reader::EventReader;
 use xml::reader::events::*;
 
 use xpln2bfo::odf;
+use xpln2bfo::odf::ods;
 
 fn main() {
     std::process::exit(run());

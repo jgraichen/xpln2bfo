@@ -9,9 +9,6 @@ extern crate zip;
 
 use std::io;
 use std::io::Read;
-use std::error;
-use std::fmt;
-
 
 pub struct File {
     pub mimetype: String
