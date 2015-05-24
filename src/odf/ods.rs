@@ -1,7 +1,0 @@
-//
-
-struct Parser;
-
-impl Parser {
-
-}
