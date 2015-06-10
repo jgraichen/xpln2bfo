@@ -1,7 +1,7 @@
 extern crate zip;
 extern crate xml;
 
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::fs;
 
 use xml::reader::EventReader;
@@ -129,7 +129,7 @@ fn parse_trains<B: std::io::Read>(parser: &mut EventReader<B>, trains: &mut Vec<
 }
 
 
-fn parse_cells<B: std::io::Read>(parser: &mut EventReader<B>) -> Vec<String> {
+fn parse_cells<B: std::io::Read>(parser: &mut EventReader<B>) -> Vec<Option<String>> {
     let mut values = Vec::new();
     loop {
         match parser.next() {
@@ -151,7 +151,7 @@ fn parse_cells<B: std::io::Read>(parser: &mut EventReader<B>) -> Vec<String> {
     return values;
 }
 
-fn parse_cell<B: std::io::Read>(parser: &mut EventReader<B>) -> String {
+fn parse_cell<B: std::io::Read>(parser: &mut EventReader<B>) -> Option<String> {
     let mut inside = false;
     loop {
         match parser.next() {
@@ -164,13 +164,10 @@ fn parse_cell<B: std::io::Read>(parser: &mut EventReader<B>) -> String {
                 if name.local_name == "table-cell" {
                     break;
                 }
-                if name.local_name == "p" {
-                    inside = false;
-                }
             }
             XmlEvent::Characters(string) => {
                 if inside {
-                    return string;
+                    return Some(string);
                 }
             }
             XmlEvent::Error(_) => { break; }
@@ -178,5 +175,5 @@ fn parse_cell<B: std::io::Read>(parser: &mut EventReader<B>) -> String {
         }
     }
 
-    return String::new();
+    return None;
 }
