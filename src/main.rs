@@ -1,5 +1,3 @@
-#![feature(slice_patterns)]
-#![feature(convert)]
 extern crate zip;
 extern crate xml;
 
@@ -9,6 +7,7 @@ mod ods {
   use std::io;
   use std::io::{Read, Seek};
   use std::convert;
+  use std::mem;
 
   use zip::read::ZipArchive;
   use zip::result::ZipError;
@@ -19,18 +18,12 @@ mod ods {
   use xml::attribute::OwnedAttribute;
 
   #[derive(Debug)]
-  pub enum Event {
-    StartTable(String),
-    EndTable(String),
-    Row(Vec<String>)
-  }
-
-  #[derive(Debug)]
   pub enum Error {
     IoError(io::Error),
     ZipError(ZipError),
     XmlError(xml::common::Error),
-    InvalidMimetype
+    InvalidMimetype(String),
+    InvalidSpreadsheet(String)
   }
 
   impl convert::From<ZipError> for Error {
@@ -45,7 +38,60 @@ mod ods {
     }
   }
 
-  pub fn parse<T: Read+Seek, H: FnMut(Event) -> ()>(file: T, handler: &mut H) -> Result<(), Error> {
+  #[derive(Debug)]
+  pub struct Spreadsheet {
+    tables: Vec<Table>
+  }
+
+  impl Spreadsheet {
+    fn new() -> Spreadsheet {
+      return Spreadsheet { tables: Vec::new() };
+    }
+
+    pub fn get(&self, table_name: &str) -> Option<&Table> {
+      for i in 0..self.tables.len() {
+        if self.tables[i].name == table_name {
+          return self.tables.get(i);
+        }
+      }
+      return None;
+    }
+  }
+
+  #[derive(Debug)]
+  pub struct Table {
+    name: String,
+    rows: Vec<Row>
+  }
+
+  impl Table {
+    pub fn name(&self) -> &str {
+      return self.name.as_ref();
+    }
+
+    pub fn rows(&self) -> &Vec<Row> {
+      return &self.rows;
+    }
+  }
+
+  #[derive(Debug)]
+  pub struct Row {
+    pub number: usize,
+    pub values: Vec<String>
+  }
+
+  impl ::std::fmt::Display for Row {
+    fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> Result<(), ::std::fmt::Error> {
+      try!(write!(fmt, "row {}: {}", self.number, self.values.connect(", ")));
+
+      Ok(())
+    }
+  }
+
+  #[derive(PartialEq, Debug)]
+  enum Token { Bottom, Table, Row, Cell }
+
+  pub fn parse<T: Read+Seek>(file: T) -> Result<Spreadsheet, Error> {
     let mut archive = try!(ZipArchive::new(file));
 
     {
@@ -55,141 +101,96 @@ mod ods {
       try!(file.read_to_string(&mut mime));
 
       if mime != "application/vnd.oasis.opendocument.spreadsheet" {
-        return Err(Error::InvalidMimetype)
+        return Err(Error::InvalidMimetype(mime));
       }
     }
 
-    {
-      let file = try!(archive.by_name("content.xml"));
-      let mut parser = Parser::new(file);
+    let file  = try!(archive.by_name("content.xml"));
 
-      loop {
-        match parser.scan("table") {
-          Some(XmlEvent::StartElement { name: _, attributes, namespace: _ }) => {
-            let table_name = match extract_attribute(&attributes, "name") {
-              Some(name) => name,
-              None => continue
-            };
+    let mut stack       = Vec::new();
+    let mut parser      = EventReader::new(file);
 
-            handler(Event::StartTable(table_name));
+    let mut value       = String::new();
+    let mut values      = Vec::new();
+    let mut rows        = Vec::new();
+    let mut table       = None;
+    let mut spreadsheet = Spreadsheet::new();
 
-            loop {
-              match parser.scan("table-row") {
-                Some(XmlEvent::StartElement { name: _, attributes: _, namespace: _ }) => {
-                  let mut values = Vec::new();
+    stack.push(Token::Bottom);
 
-                  loop {
-                    match parser.scan("table-cell") {
-                      Some(XmlEvent::StartElement { name: _, attributes: _, namespace: _ }) => {
-                        values.push(parser.text());
-                      },
-                      Some(_) => break,
-                      None => break
-                    }
-                  }
+    for event in parser.events() {
+      match event {
+        XmlEvent::StartElement { name, attributes, namespace: _ } => {
+          match name.local_name.as_ref() {
+            "table" => {
+              assert_eq!(Token::Bottom, *stack.last().unwrap());
 
-                  handler(Event::Row(values));
-                },
-                Some(_) => break,
-                None => break
-              }
-            }
+              let name  = match extract_attribute(&attributes, "name") {
+                Some(name) => name,
+                None => return Err(Error::InvalidSpreadsheet(String::from("Table without name attribute.")))
+              };
 
-            let table_name = match extract_attribute(&attributes, "name") {
-              Some(name) => name,
-              None => continue
-            };
+              table = Some(name);
 
-            handler(Event::EndTable(table_name));
-          },
-          Some(XmlEvent::Error(err)) => {
-            return Err(Error::XmlError(err));
-          },
-          Some(XmlEvent::EndDocument) => { break },
-          Some(_) => {},
-          None => { continue /* to next table */ }
-        }
-      }
-    }
-
-    Ok(())
-  }
-
-  struct Parser<T: Read> {
-    xml: EventReader<T>,
-    stack: Vec<String>
-  }
-
-  impl<T: Read> Parser<T> {
-    fn new(file: T) -> Parser<T> {
-      Parser {
-        xml: EventReader::new(file),
-        stack: Vec::new()
-      }
-    }
-
-    fn scan(&mut self, search: &str) -> Option<XmlEvent> {
-      loop {
-        match self.xml.next() {
-          XmlEvent::StartElement { name, attributes, namespace: ns } => {
-            if name.local_name == search {
-              if self.stack.last()
-                  .map(|&ref top| top != search)
-                  .unwrap_or(true) {
-                let mut current = String::new();
-                current.push_str(search);
-
-                self.stack.push(current);
-              }
-
-              return Some(XmlEvent::StartElement { name: name, attributes: attributes, namespace: ns });
-            }
-          },
-          XmlEvent::EndElement { name } => {
-            if self.stack.get(self.stack.len() - 2)
-                .map(|&ref prev| *prev == name.local_name)
-                .unwrap_or(false) {
-              self.stack.pop().unwrap();
-              return None;
-            }
+              stack.push(Token::Table);
+            },
+            "table-row" => {
+              assert_eq!(Token::Table, *stack.last().unwrap());
+              stack.push(Token::Row);
+            },
+            "table-cell" => {
+              assert_eq!(Token::Row, *stack.last().unwrap());
+              stack.push(Token::Cell);
+            },
+            _ => ()
           }
-          XmlEvent::Error(err) => {
-            return Some(XmlEvent::Error(err));
-          },
-          XmlEvent::EndDocument => {
-            return Some(XmlEvent::EndDocument);
-          },
-          _ => {}
-        }
-      }
-    }
+        },
+        XmlEvent::EndElement { name } => {
+          match name.local_name.as_ref() {
+            "table"      => {
+              assert_eq!(Token::Table, stack.pop().unwrap());
 
-    fn text(&mut self) -> String {
-      let mut str = String::new();
+              let name = mem::replace(&mut table, None).unwrap();
+              let rvec = mem::replace(&mut rows, Vec::new());
 
-      loop {
-        match self.xml.next() {
-          XmlEvent::Characters(string) => {
-            str.push_str(string.as_ref());
+              let table = Table {
+                name: name,
+                rows: rvec
+              };
+
+              spreadsheet.tables.push(table);
+            },
+            "table-row"  => {
+              assert_eq!(Token::Row, stack.pop().unwrap());
+
+              let vvec  = mem::replace(&mut values, Vec::new());
+              let index = rows.len();
+
+              rows.push(Row { number: index, values: vvec });
+            },
+            "table-cell" => {
+              assert_eq!(Token::Cell, stack.pop().unwrap());
+
+              let val = mem::replace(&mut value, String::new());
+
+              values.push(val);
+            },
+            _ => ()
           }
-          XmlEvent::EndElement { name } => {
-            match self.stack.last() {
-              Some(&ref current) => {
-                if name.local_name == *current {
-                  break;
-                }
-              },
-              None => ()
-            }
-          },
-          XmlEvent::Error(_) => break,
-          XmlEvent::EndDocument => break,
-          _ => {}
-        }
+        },
+        XmlEvent::CData(data) |
+        XmlEvent::Characters(data) => {
+          match *stack.last().unwrap() {
+            Token::Cell => value.push_str(data.as_ref()),
+            _ => ()
+          }
+        },
+        XmlEvent::Error(err) => return Err(Error::XmlError(err)),
+        _ => ()
       }
-
-      return str;
     }
+
+    return Ok(spreadsheet);
   }
 
   fn extract_attribute(attributes: &Vec<OwnedAttribute>, name: &str) -> Option<String> {
@@ -209,54 +210,106 @@ mod ods {
 mod xpln {
   use std::str::FromStr;
   use std::num::ParseIntError;
+  use std::collections::HashMap;
+
+  use ods;
 
   #[derive(Debug)]
-  pub struct Train {
-    pub number: usize,
-    pub name: String,
-    pub timetable: Vec<Record>,
+  pub struct Xpln {
+    trains: HashMap<usize, Train>,
+    stations: HashMap<String, Station>,
+  }
+
+  impl Xpln {
+    pub fn new() -> Xpln {
+      let xpln = Xpln {
+        trains: HashMap::new(),
+        stations: HashMap::new()
+      };
+
+      return xpln;
+    }
+
+    pub fn load(&mut self, document: ods::Spreadsheet) {
+      let trains_table = document.get("Trains").unwrap();
+
+      for row in trains_table.rows() {
+        // Require at least 11 fields for matching and parsing
+        if row.values.len() < 11 { continue; }
+
+        match row.values[7].as_ref() {
+          "traindef" => {
+            let train = Train::parse(&row.values);
+
+            match train {
+              Ok(train) => { self.trains.insert(train.number, train); },
+              Err(err) => { println!("ERR: Invalid traindef: {}\n     {}", err, row); }
+            }
+          },
+          // "timetable" => {
+          //   let timetable = Timetable::parse(&row.values);
+
+          //   match timetable {
+          //     Ok(train) => { self.timetables.push(timetable); },
+          //     Err(err) => { println!("ERR: Invalid timetable: {}\n     {}", err, row); }
+          //   }
+          // }
+          _ => ()
+        }
+      }
+    }
   }
 
   #[derive(Debug)]
-  pub struct Record {
-    pub track: usize,
+  pub struct Train{
+    pub number: usize,
+    pub name: String
+  }
+
+  impl Train {
+    fn parse(values: &Vec<String>) -> Result<Train, ParseIntError> {
+      let v : Vec<&str> = values.iter().map(|s| s.as_ref()).collect();
+
+      Ok(Train {
+        number: try!(usize::from_str(v[0])),
+        name: String::from(v[8])
+      })
+    }
+  }
+
+  #[derive(Debug)]
+  pub struct Station {
+    pub name: String,
+    pub remark: String,
+  }
+
+  #[derive(Debug)]
+  pub struct Track {
+    pub name: String,
+    pub owner: String,
+    pub station: String,
+  }
+
+  #[derive(Debug)]
+  pub struct Timetable {
+    pub train: usize,
+    pub track: String,
     pub remark: String,
     pub station: String,
     pub arrival: String,
     pub departure: String,
   }
 
-  impl Train {
-    pub fn parse(num: &str, name: &str) -> Result<Train, ParseIntError> {
-      let train = Train {
-        name: String::from(name),
-        number: try!(usize::from_str(num)),
-        timetable: Vec::new(),
-      };
-
-      Ok(train)
-    }
-
-    pub fn add_record(&mut self, record: Record) {
-      self.timetable.push(record);
-    }
-  }
-
-  impl Record {
-    pub fn parse(station: &str, track: &str, arrival: &str, departure: &str,
-                 remark: &str)  -> Result<Record, ParseIntError> {
-
-      let record = Record {
-        station: String::from(station),
-        track: try!(usize::from_str(track)),
-        arrival: String::from(arrival),
-        departure: String::from(departure),
-        remark: String::from(remark),
-      };
-
-      Ok(record)
-    }
-  }
+  // impl Timetable {
+  //   fn parse(values: &Vec<String>) -> Result<Train, ParseIntError> {
+  //     Ok(Timetable {
+  //       train: try!(usize::from_str(values.get(0).unwrap())),
+  //       track: String::from(values.get(3).unwrap().as_ref()),
+  //       remark: String::from(values.get(10).unwrap().as_ref()),
+  //       station: String::from(values.get(2).unwrap().as_ref()),
+  //     });
+  //   }
+  // }
 }
 
 fn main() {
@@ -265,8 +318,8 @@ fn main() {
 
 fn run() -> i32 {
   let args: Vec<_> = std::env::args().collect();
-  if args.len() < 2 {
-    println!("Usage: {} <input>", args[0]);
+  if args.len() < 3 {
+    println!("Usage: {} <input> <outdir>", args[0]);
     return 1;
   }
 
@@ -276,54 +329,19 @@ fn run() -> i32 {
     Err(..) => { println!("Error: File {:?} not found.", fname); return 2; }
   };
 
-  let mut in_trains_table = false;
-  let mut trains = Vec::new();
+  let outdir = std::path::Path::new(&*args[2]);
+  std::fs::create_dir_all(outdir).unwrap();
 
-  ods::parse(file, &mut |event| {
-    match event {
-      ods::Event::StartTable(name) => {
-        if name == "Trains" { in_trains_table = true; }
-        println!("Processing table {}...", name);
-      },
-      ods::Event::Row(values) => {
-        if !in_trains_table { return; }
+  println!("Loading {:?}...", fname.to_str().unwrap());
 
-        let vals : Vec<&str> = values.iter().map(|&ref s| (*s).as_str()).collect();
+  let document = ods::parse(file).unwrap();
 
-        match vals.as_slice() {
-          [num, _, _, _, _, _, _, "traindef", name, _, ..] => {
-            match xpln::Train::parse(num, name) {
-              Ok(train) => trains.push(train),
-              Err(err) => { println!("WARN: Invalid row: {:?}: {}", vals, err) }
-            }
-          },
-          [num, _, station, track, arrival, departure, _, "timetable", name, remark, ..] => {
-            let out_of_order = match trains.last() {
-              Some(ref train) => train.name != name,
-              None => true
-            };
+  println!("Extracting XPLN objects...");
 
-            if out_of_order {
-              println!("WARN: Out-of-order timetable entry: {:?}", vals)
-            } else {
-              match xpln::Record::parse(station, track, arrival, departure, remark) {
-                Ok(record) => {
-                  trains.last_mut().unwrap().add_record(record);
-                },
-                Err(err) => { println!("WARN: Invalid row: {:?}: {}", vals, err) }
-              }
-            }
-          }
-          _ => ()
-        }
-      },
-      ods::Event::EndTable(name) => {
-        if name == "Trains" { in_trains_table = false; }
-      }
-    }
-  }).unwrap();
+  let mut xpln = xpln::Xpln::new();
+  xpln.load(document);
 
-  println!("{:?}", trains);
+  println!("{:?}", xpln);
 
   return 0;
 }
