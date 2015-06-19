@@ -2,6 +2,8 @@ language: rust
 rust:
 - stable
 script:
+- cargo test --verbose
+before_deploy:
 - cargo build --release
 deploy:
   provider: releases
@@ -10,3 +12,4 @@ deploy:
   file: "./target/release/xpln2bfo"
   on:
     repo: jgraichen/xpln2bfo
+    tags: true
