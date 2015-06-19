@@ -1,7 +1,12 @@
 language: rust
 rust:
-  - stable
-
+- stable
 script:
-  - cargo build --verbose
-#  - cargo test --verbose
+- cargo build --release
+deploy:
+  provider: releases
+  api_key:
+    secure: FaSgmu4edgi39iN22j2+m9BVLZuFy8SyWLe3W4+A0OwyFhBpJf6Z87Z8uKtIdw3Iy5+2X2Onfq5WC8tNwGyAPB7UB0qNomnq8/lXuBGxQYeFzzw42/3j1AJYY86SLRfhio7wy74QYxgV413OLvqMsjxq3jU5zJr1x5SumyOdOwnYukjEIDtcM+ubJ5e5XBmEQAIUdRLISjlHQ0iumkT9KCBHhI9R9fgZX316rmzHCg5HgbWEv6S3l0Elo6C+rQ8inCe1sp3QP5BDH8l10mABGmV0eMa+BgFtFUwt7vCxAhiCqsi7HOYEmD3Y8A+vKjILX93alXfw+wJrb9fp5E6QGHPYu6jMpI+WE3rm+8aNHzyhP7pBBMHLlxVCgcNcAlIHCZ7XkzI/pk3O61Ezou4rhf6SfQvh2ZUVtPMVilVWWDfmwtLPDgWLZh73eWHxBnuYo3H1eYza+97v3pVtkhgzCOViHSPQy50YaiDlw9oQnYb/T6e9dourtPZbjryZ6BnRvDQhzsMjLrDHPwYGIJvnGWJ2f8cwH+cQSPHKEGArf62UPLpkzd5sLE0zMp1s7R4WCPOZq7n10EYkDi9bdDi+y9FIDFmp9yqcCHzxdhZraLsDOIefxsEtYzU3tlAytk5dqty5D50wY2wuTXoZc7eQssytcVjeH9D066R4sG6xeQY=
+  file: "./target/release/xpln2bfo"
+  on:
+    repo: jgraichen/xpln2bfo
