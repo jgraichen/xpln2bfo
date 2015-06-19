@@ -97,10 +97,6 @@ pub struct Table {
 }
 
 impl Table {
-    pub fn name(&self) -> &str {
-        return self.name.as_ref();
-    }
-
     pub fn rows(&self) -> &Vec<Row> {
         return &self.rows;
     }
@@ -228,7 +224,7 @@ pub fn parse<T: Read+Seek>(file: T) -> Result<Spreadsheet, Error> {
                         let number_columns_repeated = match extract_attribute(&attributes, "number-columns-repeated") {
                             Some(value) => match usize::from_str(value.as_ref()) {
                                 Ok(value) => value,
-                                Err(ref err) => {
+                                Err(_) => {
                                     return Err(Error::from(
                                         "Parser error on table:number-columns-repeated: Not a valid number."
                                     ));

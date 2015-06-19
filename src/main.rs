@@ -33,58 +33,58 @@ fn run() -> i32 {
 	println!("Extracting XPLN objects...");
 
 	let mut xpln = xpln::Xpln::new();
-	xpln.load(document);
+	xpln.load(&document);
 
 	//
 	// Export BFO
 	//
 
-	// let outdir = match args.get(2) {
-	// 	Some(dir) => PathBuf::from(dir),
-	// 	None => fname.with_extension("")
-	// };
+	let outdir = match args.get(2) {
+		Some(dir) => PathBuf::from(dir),
+		None => fname.with_extension("")
+	};
 
-	// fs::create_dir_all(&outdir).unwrap();
+	fs::create_dir_all(&outdir).unwrap();
 
-	// for station in xpln.stations.values() {
-	// 	let mut file = File::create(&outdir.join(format!("{}.bfo", &station.name))).unwrap();
-	// 	let mut tts  = Vec::new();
+	for station in xpln.stations.values() {
+		let mut file = File::create(&outdir.join(format!("{}.bfo", &station.name))).unwrap();
+		let mut tts  = Vec::new();
 
-	// 	for train in xpln.trains.values() {
-	// 		for timetable in train.timetables.iter() {
-	// 			if timetable.station == station.name {
-	// 				tts.push(timetable);
-	// 			}
-	// 		}
-	// 	}
+		for train in xpln.trains.values() {
+			for timetable in train.timetables.iter() {
+				if timetable.station == station.name {
+					tts.push(timetable);
+				}
+			}
+		}
 
-	// 	tts.sort_by(|ref t0, ref t1| t0.arrival.cmp(&t1.arrival));
+		tts.sort_by(|ref t0, ref t1| t0.arrival.cmp(&t1.arrival));
 
-	// 	let mut data  = String::new();
-	// 	let     arrow = " -->";
+		let mut data  = String::new();
+		let     arrow = " -->";
 
-	// 	for timetable in tts {
+		for timetable in tts {
 
-	// 		let arrival : &str = if timetable.arrival == timetable.departure {
-	// 			arrow
-	// 		} else {
-	// 			timetable.arrival.as_ref()
-	// 		};
+			let arrival : &str = if timetable.arrival == timetable.departure {
+				arrow
+			} else {
+				timetable.arrival.as_ref()
+			};
 
-	// 		let departure : &str = &timetable.departure;
-	// 		let train     : &str = &timetable.train.name;
-	// 		let track     : &str = &timetable.track;
-	// 		let remark    : &str = &timetable.remark;
+			let departure : &str = &timetable.departure;
+			let train     : &str = &xpln.trains[&timetable.train].name();
+			let track     : &str = &timetable.track;
+			let remark    : &str = &timetable.remark;
 
-	// 		let line = format!("{arrival}\t{departure}\t{train}\t\t\t{track}\t\t\t\t\t{remark}\n",
-	// 			arrival=arrival, departure=departure, track=track, train=train, remark=remark
-	// 		);
+			let line = format!("{arrival}\t{departure}\t{train}\t\t\t{track}\t\t\t\t\t{remark}\n",
+				arrival=arrival, departure=departure, track=track, train=train, remark=remark
+			);
 
-	// 		data.push_str(&line);
-	// 	}
+			data.push_str(&line);
+		}
 
-	// 	file.write_all(data.as_bytes()).unwrap();
-	// }
+		file.write_all(data.as_bytes()).unwrap();
+	}
 
 	// println!("{:?}", outdir);
 	// println!("{}", xpln);
