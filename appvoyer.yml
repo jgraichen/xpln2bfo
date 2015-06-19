@@ -13,5 +13,8 @@ install:
 platform:
   - x86
 
-build:
-  - cargo build --release
+version: 0.1.0-{build}
+clone_depth: 25
+build_script:
+- cargo build --release --verbose
+
