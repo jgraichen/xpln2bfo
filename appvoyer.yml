@@ -17,4 +17,8 @@ version: 0.1.0-{build}
 clone_depth: 25
 build_script:
 - cargo build --release --verbose
-
+deploy:
+- provider: GitHub
+  auth_token:
+    secure: TDESQLeW/xP2LA8ysSm/MA95QiSbVd5bYBiCc18qOOQLaotvAVVDjvQkki4aCWZn
+  artifact: ./target/release/xpln2bfo.exe
