@@ -6,7 +6,7 @@ install:
         Start-FileDownload 'https://static.rust-lang.org/dist/rust-1.0.0-x86_64-pc-windows-gnu.exe' -FileName rust.exe
       }
   - rust.exe /VERYSILENT /NORESTART /DIR="C:\Program Files\Rust"
-  - SET PATH=%PATH%;C:\Program Files\Rust\bin
+  - SET PATH=%PATH%;C:\Program Files\Rust\bin;C:\MinGW\bin
   - rustc -vV
   - cargo -V
 
