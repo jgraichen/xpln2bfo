@@ -16,7 +16,7 @@ Small utility to convert XPLAN timetable spreadsheets (ods) to BFO text document
 * Some dependencies seem to not compile on M$ Windows(R)(C)(TM) (See appveyor build status)
 * Arrival/Departure times may be incorrectly compacted for fiddleyards
 
-## Compile
+## Build yourself
 
 *xpln2bfo* is written in [Rust](http://rust-lang.org) and can be compiled using `cargo`:
 
