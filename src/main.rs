@@ -67,16 +67,9 @@ fn run() -> i32 {
 		tts.sort_by(|ref t0, ref t1| t0.arrival.cmp(&t1.arrival));
 
 		let mut data  = String::new();
-		let     arrow = " -->";
 
 		for timetable in tts {
-
-			let arrival : &str = if timetable.arrival == timetable.departure {
-				arrow
-			} else {
-				timetable.arrival.as_ref()
-			};
-
+			let arrival   : &str = &timetable.arrival;
 			let departure : &str = &timetable.departure;
 			let train     : &str = &xpln.trains[&timetable.train].name();
 			let track     : &str = &timetable.track;
