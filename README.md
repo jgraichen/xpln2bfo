@@ -6,6 +6,12 @@ Small utility to convert XPLAN timetable spreadsheets (ods) to BFO text document
 
 	$ ./xpln2bfo <spreadsheet> <outdir>
 
+## Known limitations
+
+* As of now only BFO text documents are emitted; no RgZm configuration
+* Next and previous stations are empty for all timetable entries
+* Untested
+
 ## Compile
 
 *xpln2bfo* is written in [Rust](https://rust-lang.org) and can be compiled using `cargo`:
