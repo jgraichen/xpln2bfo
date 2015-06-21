@@ -12,8 +12,9 @@ Small utility to convert XPLAN timetable spreadsheets (ods) to BFO text document
 
 * As of now only BFO text documents are emitted; no RgZm configuration
 * Next and previous stations are empty for all timetable entries
-* Untested
+* Untested code; only manual tested with single timetable
 * Some dependencies seem to not compile on M$ Windows(R)(C)(TM) (See appveyor build status)
+* Arrival/Departure times may be incorrectly compacted for fiddleyards
 
 ## Compile
 
