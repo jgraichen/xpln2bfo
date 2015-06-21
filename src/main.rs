@@ -44,10 +44,16 @@ fn run() -> i32 {
 		None => fname.with_extension("")
 	};
 
+	println!("Write BFOs...");
+
 	fs::create_dir_all(&outdir).unwrap();
 
 	for station in xpln.stations.values() {
-		let mut file = File::create(&outdir.join(format!("{}.bfo", &station.name))).unwrap();
+		let path = outdir.join(format!("{}.txt", &station.name));
+
+		println!("  {:?}", &path);
+
+		let mut file = File::create(&path).unwrap();
 		let mut tts  = Vec::new();
 
 		for train in xpln.trains.values() {
@@ -86,8 +92,7 @@ fn run() -> i32 {
 		file.write_all(data.as_bytes()).unwrap();
 	}
 
-	// println!("{:?}", outdir);
-	// println!("{}", xpln);
+	println!("Done.");
 
 	return 0;
 }
