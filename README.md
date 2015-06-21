@@ -1,5 +1,7 @@
 # xpln2bfo
 
+[![Build Status](https://travis-ci.org/jgraichen/xpln2bfo.svg?branch=master)](https://travis-ci.org/jgraichen/xpln2bfo) [![Build status](https://ci.appveyor.com/api/projects/status/hhxl44komt45clpb?svg=true)](https://ci.appveyor.com/project/jgraichen/xpln2bfo)
+
 Small utility to convert XPLAN timetable spreadsheets (ods) to BFO text documents usable for RgZm.
 
 ## Usage
@@ -11,7 +13,7 @@ Small utility to convert XPLAN timetable spreadsheets (ods) to BFO text document
 * As of now only BFO text documents are emitted; no RgZm configuration
 * Next and previous stations are empty for all timetable entries
 * Untested
-* Some dependencies seem to not compile on M$ Windows(R)(C)(TM)
+* Some dependencies seem to not compile on M$ Windows(R)(C)(TM) (See appveyor build status)
 
 ## Compile
 
