@@ -17,7 +17,7 @@ Small utility to convert XPLAN timetable spreadsheets (ods) to BFO text document
 
 ## Compile
 
-*xpln2bfo* is written in [Rust](https://rust-lang.org) and can be compiled using `cargo`:
+*xpln2bfo* is written in [Rust](http://rust-lang.org) and can be compiled using `cargo`:
 
 	$ cargo build --release
 
